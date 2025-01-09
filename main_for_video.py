@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
+# python main_for_video.py --config configs/vcod_finetune.py --model-name PvtV2B5_ZoomNeXt --evaluate --load-from pvtv2-b5-5frame-zoomnext.pth
 import argparse
 import datetime
 import glob
 import inspect
-import logging
 import os
 import re
 import shutil
 import time
 
 import albumentations as A
-import colorlog
 import cv2
 import numpy as np
 import torch
@@ -21,14 +20,6 @@ from tqdm import tqdm
 
 import methods as model_zoo
 from utils import io, ops, pipeline, pt_utils, py_utils, recorder
-
-LOGGER = logging.getLogger("main")
-LOGGER.propagate = False
-LOGGER.setLevel(level=logging.DEBUG)
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
-stream_handler.setFormatter(colorlog.ColoredFormatter("%(log_color)s[%(filename)s] %(reset)s%(message)s"))
-LOGGER.addHandler(stream_handler)
 
 
 def construct_frame_transform():
@@ -82,6 +73,7 @@ class VideoTestDataset(data.Dataset):
             valid_names = sorted(
                 set(image_names).intersection(mask_names), key=lambda item: get_number_from_tail(item)
             )
+
             assert len(valid_names) >= num_frames, image_group_path
 
             i = 0
@@ -132,6 +124,8 @@ class VideoTestDataset(data.Dataset):
 
     def __len__(self):
         return len(self.total_data_paths)
+
+
 
 
 class VideoTrainDataset(data.Dataset):
@@ -188,7 +182,6 @@ class VideoTrainDataset(data.Dataset):
                         clip_info.extend(clip_info[:last])
                     data_paths.append(clip_info)
 
-            LOGGER.info(f"Length of {dataset_name}: {len(data_paths)}")
             self.total_data_paths.extend(data_paths)
 
         self.frame_specific_transformation = construct_frame_transform()
@@ -247,6 +240,7 @@ class Evaluator:
         self.clip_range = clip_range
         self.metric_names = metric_names
 
+
     @torch.no_grad()
     def eval(self, model, data_loader, save_path=""):
         model.eval()
@@ -265,10 +259,15 @@ class Evaluator:
 
             mask_paths = batch["info"]["mask_path"]
             group_names = batch["info"]["group_name"]
+            
             for clip_idx, clip_pred in enumerate(probs):
                 for frame_idx, pred in enumerate(clip_pred):
                     mask_path = mask_paths[f"frame_{frame_idx}"][clip_idx]
                     mask_array = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                    if mask_array is None:
+                        print(f"Error: Could not read mask at {mask_path}")
+                        continue
+                    
                     mask_array[mask_array > 0] = 255
                     mask_h, mask_w = mask_array.shape
                     pred = ops.resize(pred, height=mask_h, width=mask_w)
@@ -277,18 +276,19 @@ class Evaluator:
                         pred = ops.clip_to_normalize(pred, clip_range=self.clip_range)
 
                     group_name = group_names[clip_idx]
-                    if save_path:  # 这里的save_path包含了数据集名字
-                        ops.save_array_as_image(
-                            data_array=pred,
-                            save_name=os.path.basename(mask_path),
-                            save_dir=os.path.join(save_path, group_name),
-                        )
+                    if save_path:
+                        group_dir = os.path.join(save_path, group_name)
+                        os.makedirs(group_dir, exist_ok=True)  # Ensure directory exists
+                        
+                        save_file = os.path.join(group_dir, os.path.basename(mask_path))
+                        cv2.imwrite(save_file, (pred * 255).astype(np.uint8))
+                        # print(f"Saved prediction: {save_file}")
 
                     pred = (pred * 255).astype(np.uint8)
                     all_metrics.step(group_name=group_name, pre=pred, gt=mask_array, gt_path=mask_path)
+        
         seg_results, group_seg_results = all_metrics.show(return_group=True)
         return seg_results, group_seg_results
-
 
 def test(model, cfg):
     test_wrapper = Evaluator(device=cfg.device, metric_names=cfg.metric_names, clip_range=cfg.test.clip_range)
@@ -299,25 +299,21 @@ def test(model, cfg):
         te_loader = data.DataLoader(
             dataset=te_dataset, batch_size=cfg.test.batch_size, num_workers=cfg.test.num_workers, pin_memory=True
         )
-        LOGGER.info(f"Testing with testset: {te_name}: {len(te_dataset)}")
 
         if cfg.save_results:
+            # print('========================')
             save_path = os.path.join(cfg.path.save, te_name)
-            LOGGER.info(f"Results will be saved into {save_path}")
+            os.makedirs(save_path, exist_ok=True)
+            # test_file = os.path.join(save_path, "test_file.txt")
+            # print(save_path)
+            # with open(test_file, "w") as f:
+            #     f.write("Diagnostic test")
         else:
             save_path = ""
-
-        seg_results, group_seg_results = test_wrapper.eval(model=model, data_loader=te_loader, save_path=save_path)
-        seg_results_str = ", ".join([f"{k}: {v:.03f}" for k, v in seg_results.items()])
-        LOGGER.info(f"({te_name}): {py_utils.mapping_to_str(te_info)}\n{seg_results_str}")
-
-        max_group_name_length = max([len(n) for n in group_seg_results.keys()])
-        for group_name, group_results in group_seg_results.items():
-            metric_str = ""
-            for metric_name, metric_value in group_results.items():
-                metric_str += "|" + metric_name + " " + str(metric_value).ljust(6)
-            LOGGER.info(f"{group_name.rjust(max_group_name_length)}: {metric_str}")
-
+        
+        test_wrapper.eval(model=model, data_loader=te_loader, save_path=save_path)
+        # seg_results, group_seg_results = test_wrapper.eval(model=model, data_loader=te_loader, save_path=save_path)
+        # max_group_name_length = max([len(n) for n in group_seg_results.keys()])
 
 def train(model, cfg):
     tr_dataset = VideoTrainDataset(
@@ -325,7 +321,6 @@ def train(model, cfg):
         shape=cfg.train.data.shape,
         num_frames=cfg.num_frames,
     )
-    LOGGER.info(f"Total Length of Video Trainset: {len(tr_dataset)}")
 
     tr_loader = data.DataLoader(
         dataset=tr_dataset,
@@ -361,19 +356,15 @@ def train(model, cfg):
     scheduler.plot_lr_coef_curve(save_path=cfg.path.pth_log)
     scaler = pipeline.Scaler(optimizer, cfg.train.use_amp, set_to_none=cfg.train.optimizer.set_to_none)
 
-    LOGGER.info(f"Scheduler:\n{scheduler}\nOptimizer:\n{optimizer}")
 
     loss_recorder = recorder.HistoryBuffer()
     iter_time_recorder = recorder.HistoryBuffer()
 
-    LOGGER.info(f"Image Mean: {model.normalizer.mean.flatten()}, Image Std: {model.normalizer.std.flatten()}")
     if cfg.train.bn.freeze_encoder:
-        LOGGER.info(" >>> Freeze Backbone !!! <<< ")
         model.encoder.requires_grad_(False)
 
     train_start_time = time.perf_counter()
     for _ in range(counter.num_epochs):
-        LOGGER.info(f"Exp_Name: {cfg.exp_name}")
 
         model.train()
         if cfg.train.bn.freeze_status:
@@ -390,7 +381,7 @@ def train(model, cfg):
                 outputs = model(data=data_batch, iter_percentage=counter.curr_percent)
 
             loss = outputs["loss"]
-            loss_str = outputs["loss_str"]
+            # loss_str = outputs["loss_str"]
             loss = loss / cfg.train.grad_acc_step
             scaler.calculate_grad(loss=loss)
             if counter.every_n_iters(cfg.train.grad_acc_step):  # Accumulates scaled gradients.
@@ -406,17 +397,16 @@ def train(model, cfg):
                 or counter.is_last_inner_iter()
                 or counter.is_last_total_iter()
             ):
-                gpu_mem = f"{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G"  # (GB)
+                # gpu_mem = f"{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G"  # (GB)
                 eta_seconds = iter_time_recorder.avg * (counter.num_total_iters - counter.curr_iter - 1)
-                eta_string = f"ETA: {datetime.timedelta(seconds=int(eta_seconds))}"
-                progress = (
-                    f"{counter.curr_iter}:{counter.num_total_iters} "
-                    f"{batch_idx}/{counter.num_inner_iters} "
-                    f"{counter.curr_epoch}/{counter.num_epochs}"
-                )
-                loss_info = f"{loss_str} (M:{loss_recorder.global_avg:.5f}/C:{item_loss:.5f})"
-                lr_info = f"LR: {optimizer.lr_string()}"
-                LOGGER.info(f"{eta_string}({gpu_mem}) | {progress} | {lr_info} | {loss_info} | {data_shape}")
+                # eta_string = f"ETA: {datetime.timedelta(seconds=int(eta_seconds))}"
+                # progress = (
+                #     f"{counter.curr_iter}:{counter.num_total_iters} "
+                #     f"{batch_idx}/{counter.num_inner_iters} "
+                #     f"{counter.curr_epoch}/{counter.num_epochs}"
+                # )
+                # loss_info = f"{loss_str} (M:{loss_recorder.global_avg:.5f}/C:{item_loss:.5f})"
+                # lr_info = f"LR: {optimizer.lr_string()}"
                 cfg.tb_logger.write_to_tb("lr", optimizer.lr_groups(), counter.curr_iter)
                 cfg.tb_logger.write_to_tb("iter_loss", item_loss, counter.curr_iter)
                 cfg.tb_logger.write_to_tb("avg_loss", loss_recorder.global_avg, counter.curr_iter)
@@ -444,11 +434,8 @@ def train(model, cfg):
     io.save_weight(model=model, save_path=cfg.path.final_state_net)
 
     total_train_time = time.perf_counter() - train_start_time
-    total_other_time = datetime.timedelta(seconds=int(total_train_time - iter_time_recorder.global_sum))
-    LOGGER.info(
-        f"Total Training Time: {datetime.timedelta(seconds=int(total_train_time))} ({total_other_time} on others)"
-    )
-
+    # total_other_time = datetime.timedelta(seconds=int(total_train_time - iter_time_recorder.global_sum))
+    
 
 def parse_cfg():
     parser = argparse.ArgumentParser("Training and evaluation script")
@@ -488,12 +475,6 @@ def parse_cfg():
         f.write(cfg.pretty_text)
     shutil.copy(__file__, cfg.path.trainer_copy)
 
-    file_handler = logging.FileHandler(cfg.path.log)
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter("[%(filename)s] %(message)s"))
-    LOGGER.addHandler(file_handler)
-    LOGGER.info(cfg.pretty_text)
-
     cfg.tb_logger = recorder.TBLogger(tb_root=cfg.path.tb)
     return cfg
 
@@ -504,24 +485,26 @@ def main():
 
     model_class = model_zoo.__dict__.get(cfg.model_name)
     assert model_class is not None, "Please check your --model-name"
-    model_code = inspect.getsource(model_class)
+    # model_code = inspect.getsource(model_class)
     model = model_class(num_frames=cfg.num_frames, pretrained=cfg.pretrained, use_checkpoint=cfg.use_checkpoint)
-    LOGGER.info(model_code)
+    # LOGGER.info(model_code)
     model.to(cfg.device)
 
     if cfg.load_from:
         io.load_weight(model=model, load_path=cfg.load_from, strict=True)
 
-    LOGGER.info(f"Number of Parameters: {sum((v.numel() for v in model.parameters(recurse=True)))}")
-    if not cfg.evaluate:
-        train(model=model, cfg=cfg)
-
+    cfg.evaluate = True
+    # if not cfg.evaluate:
+    #     train(model=model, cfg=cfg)
+    # print('====================', cfg)
+    cfg.has_test = True
+    cfg.save_results = True
     if cfg.evaluate or cfg.has_test:
         io.save_weight(model=model, save_path=cfg.path.final_state_net)
         test(model=model, cfg=cfg)
 
-    LOGGER.info("End training...")
-
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    print(time.time() - start_time)

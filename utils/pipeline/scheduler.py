@@ -328,11 +328,19 @@ class Scheduler:
 
         # set lim
         x_min, x_max = 0, self.num_iters - 1
+
         dx = self.num_iters * 0.1
         ax.set_xlim(x_min - dx, x_max + 2 * dx)
 
         y_min, y_max = y_data.min(), y_data.max()
         dy = (y_data.max() - y_data.min()) * 0.1
+
+        # почему-то выдает ошибку 
+        # C:\Users\ZabockiyAE\ZoomNeXt\utils\pipeline\scheduler.py:336:
+        # UserWarning: Attempting to set identical low and high ylims makes transformation singular; automatically expanding.
+        # ax.set_ylim((y_min - dy, y_max + dy)) 
+        if y_min == y_max:
+            y_max += 0.001  # Или любое другое значение, чтобы избежать предупреждения
         ax.set_ylim((y_min - dy, y_max + dy))
 
         if self.step_by_batch:

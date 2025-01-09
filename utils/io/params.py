@@ -21,7 +21,9 @@ def save_weight(save_path, model):
 def load_weight(load_path, model, *, strict=True, skip_unmatched_shape=False):
     assert os.path.exists(load_path), load_path
     model_params = model.state_dict()
-    for k, v in torch.load(load_path, map_location="cpu").items():
+    # for k, v in torch.load(load_path, map_location="cpu").items():
+    for k, v in torch.load(load_path, map_location="cpu", weights_only=True).items():
+
         if k.endswith("module."):
             k = k[7:]
         if skip_unmatched_shape and v.shape != model_params[k].shape:
