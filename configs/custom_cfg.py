@@ -6,7 +6,7 @@ use_custom_worker_init = True
 log_interval = 20
 base_seed = 112358
 
-__NUM_EPOCHS = 1
+__NUM_EPOCHS = 3
 _SHAPE = dict(h=384, w=384)
 # __NUM_TR_SAMPLES = 3040 + 1000
 # __ITER_PER_EPOCH = __NUM_TR_SAMPLES // __BATCHSIZE

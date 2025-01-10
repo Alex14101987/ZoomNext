@@ -266,7 +266,7 @@ class VideoDataset(data.Dataset):
         super().__init__()
         self.shape = shape
         self.num_frames = num_frames
-        self.stride = num_frames - 1 if num_frames > 1 else 1
+        self.stride = num_frames  # Изменено на num_frames
 
         self.total_data_paths = []
         for animal in os.listdir(dataset_root):
@@ -293,28 +293,12 @@ class VideoDataset(data.Dataset):
                             clip_info.append((image_path, box_path, animal, current_index, clip_idx))
                             current_index += 1  # Увеличиваем индекс
 
-                    # Если clip_info меньше num_frames, добавляем недостающие элементы
-                    if len(clip_info) < self.num_frames:
-                        remaining_frames = self.num_frames - len(clip_info)
-                        start_idx = max(0, len(valid_names) - self.num_frames)
-
-                        # Добавляем недостающие элементы из конца списка в начало clip_info
-                        for j in range(start_idx, len(valid_names)):
-                            if len(clip_info) < self.num_frames:
-                                image_path, box_path = valid_names[j]
-                                # Добавляем в начало списка и присваиваем правильный индекс
-                                clip_info.insert(0, (image_path, box_path, animal, current_index, clip_idx))
-                                current_index += 1  # Увеличиваем индекс
-
-                    # Убедимся, что clip_info имеет нужную длину и в правильном порядке
+                    # Убедимся, что clip_info имеет нужную длину
                     if len(clip_info) == self.num_frames:
                         # Сортируем clip_info по индексу изображения
                         clip_info.sort(key=lambda x: int(os.path.basename(x[0]).replace('.jpg', '')))
                         clip_info = [(clip_info[index][0], clip_info[index][1], clip_info[index][2], index, clip_idx) for index in range(len(clip_info))]
                         self.total_data_paths.append(clip_info)
-
-
-        # print(f"Total data paths: {self.total_data_paths}")
 
         self.frame_specific_transformation = construct_frame_transform()
         self.frame_share_transformation = construct_video_transform()
@@ -325,11 +309,6 @@ class VideoDataset(data.Dataset):
         paths = []  # Новый список для хранения путей к изображениям
 
         clip_info = self.total_data_paths[index]
-
-        # # Если кадров недостаточно, пытаемся взять последние 5 кадров из папки
-        # if len(clip_info) < self.num_frames:
-        #     while len(clip_info) < self.num_frames:
-        #         clip_info.append(clip_info[-1])  # Дублируем последний элемент
 
         for image_path, box_path, _, idx_in_group, _ in clip_info:
             image = cv2.imread(image_path)
@@ -510,8 +489,8 @@ def draw_bounding_boxes(image, boxes, color=(0,0,255)):
     :return: Изображение с отрисованными bounding boxes.
     """
     for box in boxes:
-        if box == (0,0,0,0,0,0):
-            continue
+        # if np.all(box == 0):
+        #     continue
         class_id, conf, x_center, y_center, width, height = box
         x1 = int((x_center - width / 2) * image.shape[1])
         y1 = int((y_center - height / 2) * image.shape[0])

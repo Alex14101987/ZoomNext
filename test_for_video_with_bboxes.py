@@ -12,7 +12,7 @@ def test(model, cfg, loader):
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter('output_video.avi', fourcc, 5.0, (925, 693))
 
-    overlap_frames = 5  # Количество перекрывающихся кадров
+    overlap_frames = 0  # Количество перекрывающихся кадров
     current_image_index = 0  # Индекс текущего изображения
 
     # Получение путей к изображениям
@@ -59,12 +59,14 @@ def test(model, cfg, loader):
             # print('===true_boxes===', true_boxes. shape, true_boxes)
             for pred_box in current_pred_box:
                 image = draw_bounding_boxes(image, [pred_box], color=(255, 0, 0))
-            image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][0]])
+            # image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][0]])
+            # print('============', true_boxes.shape, true_boxes)
+            for i in range(true_boxes.shape[1]):
+                image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][i]])
 
             # Записываем обработанное изображение в видео
             out.write(image_with_boxes)
             # cv2.imshow('', image_with_boxes)
-            # cv2.waitKey(1000)
             # Увеличиваем индекс изображения для следующего кадра
             current_image_index += 1
 

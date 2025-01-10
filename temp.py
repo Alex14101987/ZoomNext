@@ -205,5 +205,58 @@ def clean_annotation_files(directory_path):
                 print(f"Файл '{filename}' был очищен, оставлена только первая строка.")
 
 # Пример использования
-directory = "ZoomNext_dataset_xywh\\Train\\arctic_fox"  # Замените на ваш путь
-clean_annotation_files(directory)
+# directory = "ZoomNext_dataset_xywh\\Train\\arctic_fox"  # Замените на ваш путь
+# clean_annotation_files(directory)
+import os
+import cv2
+import glob
+import numpy as np
+import matplotlib.pyplot as plt
+
+def load_yolo_boxes(box_path, img_width, img_height):
+    boxes = []
+    with open(box_path, 'r') as f:
+        for line in f.readlines():
+            class_id, center_x, center_y, width, height = map(float, line.strip().split())
+            x1 = int((center_x - width / 2) * img_width)
+            y1 = int((center_y - height / 2) * img_height)
+            x2 = int((center_x + width / 2) * img_width)
+            y2 = int((center_y + height / 2) * img_height)
+            boxes.append((class_id, x1, y1, x2, y2))
+    return boxes
+
+def draw_bounding_boxes(image, boxes):
+    for box in boxes:
+        class_id, x1, y1, x2, y2 = box
+        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(image, f'Class {int(class_id)}', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+def process_directory(directory, delay=1000):
+    image_paths = sorted(glob.glob(os.path.join(directory, "*.jpg")))
+    for image_path in image_paths:
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"Error loading image: {image_path}")
+            continue
+
+        img_height, img_width = image.shape[:2]
+        box_path = image_path.replace('.jpg', '.txt')
+        boxes = load_yolo_boxes(box_path, img_width, img_height)
+
+        draw_bounding_boxes(image, boxes)
+
+        # Используем Matplotlib для отображения изображения
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        plt.axis('off')  # Отключаем оси
+        plt.pause(delay / 1000)  # Задержка в секундах
+        plt.clf()  # Очищаем текущее изображение
+
+    plt.close()  # Закрываем все окна после завершения
+
+if __name__ == "__main__":
+    folder_path = 'ZoomNext_dataset_xywh\\Train\\arctic_fox'
+    process_directory(folder_path, delay=10)  # Задержка 1000 мс (1 секунда) между кадрами
+
+
+
+

@@ -1,3 +1,8 @@
+TO DO
+THE MODEL IS NOT BEING TRAINED !!!
+
+
+
 # ZoomNeXt: A Unified Collaborative Pyramid Network for Camouflaged Object Detection (TPAMI 2024)
 
 <div align="center">
