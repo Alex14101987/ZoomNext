@@ -6,15 +6,15 @@ use_custom_worker_init = True
 log_interval = 20
 base_seed = 112358
 
-__NUM_EPOCHS = 5
+__NUM_EPOCHS = 1
 _SHAPE = dict(h=384, w=384)
 # __NUM_TR_SAMPLES = 3040 + 1000
 # __ITER_PER_EPOCH = __NUM_TR_SAMPLES // __BATCHSIZE
 # __NUM_ITERS = __NUM_EPOCHS * __ITER_PER_EPOCH
 train = dict(
     batch_size=__BATCHSIZE,
-    num_workers=2,
-    use_amp=True,
+    num_workers=1,
+    use_amp=False,
     num_epochs=__NUM_EPOCHS,
     lr=0.0001,
     epoch_based=True,
@@ -38,7 +38,7 @@ train = dict(
     bn=dict(
         freeze_status=True,
         freeze_affine=True,
-        freeze_encoder=False,
+        freeze_encoder=True,
     ),
     data=dict(
         shape=_SHAPE,

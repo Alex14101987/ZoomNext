@@ -30,10 +30,11 @@ def test(model, cfg, loader):
         # print(f"Batch {batch_idx}: Average Image Value = {avg_image.item()}")
         with torch.no_grad():  # Отключаем градиенты для тестирования
             outputs = model(data=data_batch)
+        pred_boxes, masks = postprocess(outputs)
+        true_boxes = data_batch['boxes']
+        print('===test_shapes===', pred_boxes.shape, true_boxes.shape, masks.shape)
+        box_loss_fn(pred_boxes, true_boxes, masks)
 
-        true_boxes = data_batch['boxes'].squeeze(1)
-        pred_boxes = outputs["pred_boxes"]  # Убираем лишние размерности
-        box_loss_fn(pred_boxes, true_boxes)
         pred_boxes = pred_boxes.squeeze(-1).squeeze(-1)
         pred_boxes = pred_boxes.cpu().numpy()  # Переводим в numpy для удобства
         # print(f"Batch {batch_idx}: True Boxes Shape: {true_boxes.shape}, Pred Boxes Shape: {pred_boxes.shape}")
@@ -54,8 +55,11 @@ def test(model, cfg, loader):
             # print(f"Batch {batch_idx}, Frame {frame_idx}: Pred Box: {current_pred_box}, True Box: {true_boxes[frame_idx].tolist()}")
 
             # Отрисовываем bounding boxes на изображении
-            image_with_boxes = draw_bounding_boxes(image, [current_pred_box], color=(255, 0, 0))
-            image_with_boxes = draw_bounding_boxes(image_with_boxes, [true_boxes[frame_idx]])
+            # print('===current_pred_box===', current_pred_box. shape, current_pred_box)
+            # print('===true_boxes===', true_boxes. shape, true_boxes)
+            for pred_box in current_pred_box:
+                image = draw_bounding_boxes(image, [pred_box], color=(255, 0, 0))
+            image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][0]])
 
             # Записываем обработанное изображение в видео
             out.write(image_with_boxes)
@@ -69,15 +73,7 @@ def test(model, cfg, loader):
 
     out.release()  # Закрываем видеопоток
 
-# def main():
-#     cfg = parse_cfg()
-#     pt_utils.initialize_seed_cudnn(seed=cfg.base_seed, deterministic=cfg.deterministic)
-#     model_class = model_zoo.__dict__.get(cfg.model_name)
-#     model = model_class(num_frames=cfg.num_frames, pretrained=cfg.pretrained, use_checkpoint=cfg.use_checkpoint)
-#     model.to(cfg.device)
-#     cfg.load_from = "weights/best.pth"
-#     io.load_weight(model=model, load_path=cfg.load_from, strict=True)
-#     test(model=model, cfg=cfg)
+
 def main():
     cfg = parse_cfg()
     pt_utils.initialize_seed_cudnn(seed=cfg.base_seed, deterministic=cfg.deterministic)

@@ -177,3 +177,30 @@ dataset.yaml
 # Custom Scripts
 *.ps1
 *.sh
+# Игнорировать все изображения
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.webp
+
+# Игнорировать все видео
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.mkv
+*.flv
+*.webm
+
+# Игнорировать веса моделей
+*.pth
+*.pt
+
+Thumbs.db
+MoCA_Video/
+ZoomNext_dataset_xywh/
+ZoomNext_dataset_xywh_full/

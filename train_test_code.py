@@ -122,10 +122,14 @@ def custom_collate_fn(batch):
 #     visualize_boxes(pred_boxes, true_boxes)
 #     return loss
 
-def box_loss_fn(pred_boxes, true_boxes, lambda_coord=5):
+import torch
+import torch.nn.functional as F
+
+def box_loss_fn(pred_boxes, true_boxes, masks):
     # Отладочные принты для проверки входных данных
-    print("pred_boxes:", pred_boxes.shape)
+    # print("pred_boxes:", pred_boxes.shape)
     print("true_boxes:", true_boxes.shape)
+    # print("masks:", masks.shape)
 
     num_images = pred_boxes.size(0)  # 5
     num_pred_boxes = pred_boxes.size(1)  # 247
@@ -134,60 +138,56 @@ def box_loss_fn(pred_boxes, true_boxes, lambda_coord=5):
     confidence_loss = 0.0
 
     for i in range(num_images):
-        # Отладочный вывод для текущего изображения
-        # print(f"Processing image {i}: true_boxes[i] = {true_boxes[i]}")
-        # print(f"Processing image {i}: pred_boxes[i] = {pred_boxes[i]}")
-        # Извлекаем истинный бокс для текущего изображения
         true_box = true_boxes[i, 0]  # Это будет тензор с 6 элементами
 
-        # Проверяем, что класс действителен
         if true_box[0].item() >= 0:  # Используем .item() для извлечения скалярного значения
-            # Ваши вычисления потерь для действительных боксов
             for j in range(num_pred_boxes):
-                pred_box = pred_boxes[i, j, 2:6]  # [center_x, center_y, width, height]
+                if masks[i][j] == 1:  # Если маска действительна
+                    pred_box = pred_boxes[i, j, 2:6]  # [center_x, center_y, width, height]
 
-                # Преобразуем координаты из формата [center_x, center_y, width, height] в [x1, y1, x2, y2]
-                pred_x1 = pred_box[0] - pred_box[2] / 2
-                pred_y1 = pred_box[1] - pred_box[3] / 2
-                pred_x2 = pred_box[0] + pred_box[2] / 2
-                pred_y2 = pred_box[1] + pred_box[3] / 2
-                pred_box = torch.tensor([pred_x1, pred_y1, pred_x2, pred_y2], device=pred_boxes.device, requires_grad=True)  # Изменено
+                    # Преобразуем координаты из формата [center_x, center_y, width, height] в [x1, y1, x2, y2]
+                    pred_x1 = pred_box[0] - pred_box[2] / 2
+                    pred_y1 = pred_box[1] - pred_box[3] / 2
+                    pred_x2 = pred_box[0] + pred_box[2] / 2
+                    pred_y2 = pred_box[1] + pred_box[3] / 2
+                    pred_box = torch.tensor([pred_x1, pred_y1, pred_x2, pred_y2], device=pred_boxes.device, requires_grad=True)
 
-                # Преобразуем истинный бокс
-                true_x1 = true_box[2] - true_box[4] / 2
-                true_y1 = true_box[3] - true_box[5] / 2
-                true_x2 = true_box[2] + true_box[4] / 2
-                true_y2 = true_box[3] + true_box[5] / 2
-                true_box_converted = torch.tensor([true_x1, true_y1, true_x2, true_y2], device=pred_boxes.device, requires_grad=False)  # Изменено
+                    # Преобразуем истинный бокс
+                    true_x1 = true_box[2] - true_box[4] / 2
+                    true_y1 = true_box[3] - true_box[5] / 2
+                    true_x2 = true_box[2] + true_box[4] / 2
+                    true_y2 = true_box[3] + true_box[5] / 2
+                    true_box_converted = torch.tensor([true_x1, true_y1, true_x2, true_y2], device=pred_boxes.device, requires_grad=False)
 
-                # Вычисляем потери для координат
-                coord_loss += F.smooth_l1_loss(pred_box.unsqueeze(0), true_box_converted.unsqueeze(0))
+                    # Вычисляем потери для координат
+                    coord_loss += F.smooth_l1_loss(pred_box.unsqueeze(0), true_box_converted.unsqueeze(0))
 
-                # Получаем class_id на том же устройстве, что и pred_boxes
-                class_id = true_box[0].long().to(pred_boxes.device)  # Перемещаем class_id на GPU
+                    # Получаем class_id на том же устройстве, что и pred_boxes
+                    class_id = true_box[0].long().to(pred_boxes.device)
 
-                # Вычисляем класс потерь
-                class_loss += F.cross_entropy(pred_boxes[i, j, 0:1].unsqueeze(0), class_id.unsqueeze(0))
+                    # Вычисляем класс потерь
+                    class_loss += F.cross_entropy(pred_boxes[i, j, 0:1].unsqueeze(0), class_id.unsqueeze(0))
 
-                # Вычисляем потери уверенности
-                target_confidence = torch.tensor([1.0], device=pred_boxes.device).expand_as(pred_boxes[i, j, 1:2])  # Изменяем размер целевого тензора
-                confidence_loss += F.binary_cross_entropy(pred_boxes[i, j, 1:2], target_confidence)
+                    # Применяем сигмоиду к предсказанной уверенности
+                    pred_confidence = torch.sigmoid(pred_boxes[i, j, 1:2])
+
+                    # Вычисляем потери уверенности
+                    target_confidence = torch.tensor([1.0], device=pred_boxes.device).expand_as(pred_boxes[i, j, 1:2])
+                    confidence_loss += F.binary_cross_entropy(pred_confidence, target_confidence)
 
         else:
-            # Если предсказанный бокс не имеет соответствующего истинного бокса,
-            # добавляем потерю за ложное срабатывание (confidence loss)
             for j in range(num_pred_boxes):
-                target_confidence = torch.tensor([0.0], device=pred_boxes.device).expand_as(pred_boxes[i, j, 1:2])
-                confidence_loss += F.binary_cross_entropy(pred_boxes[i, j, 1:2], target_confidence)
+                if masks[i][j] == 1:  # Если маска действительна
+                    target_confidence = torch.tensor([0.0], device=pred_boxes.device).expand_as(pred_boxes[i, j, 1:2])
+                    pred_confidence = torch.sigmoid(pred_boxes[i, j, 1:2])  # Применяем сигмоиду
+                    confidence_loss += F.binary_cross_entropy(pred_confidence, target_confidence)
 
     # Общая потеря
     total_loss = coord_loss + class_loss + confidence_loss
-    # print("Total coordinate loss:", coord_loss.item())
-    # print("Total class loss:", class_loss.item())
-    # print("Total confidence loss:", confidence_loss.item())
-    print("Total loss:", total_loss.item())
+    print("===Total loss===", total_loss.item())
 
     return total_loss  # Убедитесь, что это тензор, который требует градиентов
+
 
 
 
@@ -428,4 +428,103 @@ def parse_cfg():
 
 
 cfg = parse_cfg()
- 
+
+import torch
+
+
+def postprocess(output):
+    # Обработка выходных данных
+    pred_boxes = output['pred_boxes']  # Извлекаем предсказания из словаря
+    # print('===pred_boxes.shape===', pred_boxes.shape)  # Output shape should be [5, 6000, 6]
+    batch_size = pred_boxes.shape[0]
+    
+    results = []  # Список для хранения предсказаний для каждого кадра
+    masks = []  # Список для хранения масок
+
+    for b in range(batch_size):
+        # Извлекаем предсказания для текущего кадра
+        predictions = pred_boxes[b]  # Shape: [6000, 6]
+
+        # Фильтруем предсказания по порогу уверенности
+        valid_predictions = predictions[predictions[:, 1] > 0.5]  # Убедитесь, что score > 0.5
+        
+        # Если есть валидные предсказания
+        if valid_predictions.shape[0] > 0:
+            boxes = valid_predictions[:, 2:6]  # [center_x, center_y, width, height]
+            scores = valid_predictions[:, 1]  # confidence scores
+            class_ids = valid_predictions[:, 0].long()  # class_ids
+
+            # Преобразуем box из формата [center_x, center_y, width, height] в [x1, y1, x2, y2]
+            x1 = boxes[:, 0] - boxes[:, 2] / 2
+            y1 = boxes[:, 1] - boxes[:, 3] / 2
+            x2 = boxes[:, 0] + boxes[:, 2] / 2
+            y2 = boxes[:, 1] + boxes[:, 3] / 2
+            boxes_tensor = torch.stack((x1, y1, x2, y2), dim=1)  # Shape: [num_boxes, 4]
+
+            # Форматируем выход
+            frame_result = []
+            for i in range(boxes_tensor.shape[0]):
+                box = boxes_tensor[i]
+                score = scores[i]
+                class_id = class_ids[i]
+
+                # Преобразуем box обратно в формат [center_x, center_y, width, height]
+                center_x = (box[0] + box[2]) / 2
+                center_y = (box[1] + box[3]) / 2
+                width = box[2] - box[0]
+                height = box[3] - box[1]
+
+                # Добавляем предсказание в результат
+                frame_result.append([class_id.item(), score.item(), center_x.item(), center_y.item(), width.item(), height.item()])
+            
+            # Преобразуем список предсказаний в тензор
+            frame_result_tensor = torch.tensor(frame_result, dtype=torch.float32)  # Shape: [num_boxes, 6]
+            results.append(frame_result_tensor)  # Добавляем предсказания для текущего кадра
+            masks.append(torch.ones(frame_result_tensor.shape[0], dtype=torch.int))  # Маска для валидных предсказаний
+        else:
+            # Если предсказаний нет, добавляем пустой тензор с 6 колонками
+            results.append(torch.empty((0, 6), dtype=torch.float32))  # Добавляем пустой тензор
+            masks.append(torch.zeros(1, dtype=torch.int))  # Указываем, что предсказаний нет
+
+    # Приводим результаты и маски к нужной размерности
+    max_predictions = max([result.shape[0] for result in results])  # Максимальное количество предсказаний в кадре
+    padded_results = torch.zeros((batch_size, max_predictions, 6), dtype=torch.float32)  # Паддинг для результатов
+    padded_masks = torch.zeros((batch_size, max_predictions), dtype=torch.int)  # Паддинг для масок
+
+    for i in range(batch_size):
+        padded_results[i, :results[i].shape[0], :] = results[i]  # Заполняем предсказания
+        padded_masks[i, :masks[i].shape[0]] = masks[i]  # Заполняем маски
+
+    print('==========len(results)============', len(results), [len(r) for r in results])
+    
+    # Теперь возвращаем результаты и маски
+    return padded_results, padded_masks  # Возвращаем тензор предсказаний и соответствующие маски
+
+import cv2
+def draw_bounding_boxes(image, boxes, color=(0,0,255)):
+    """
+    Отрисовывает bounding boxes на изображении.
+    
+    :param image: Исходное изображение в формате numpy array.
+    :param boxes: Bounding boxes в формате (x_center, y_center, width, height).
+    :return: Изображение с отрисованными bounding boxes.
+    """
+    for box in boxes:
+        if box == (0,0,0,0,0,0):
+            continue
+        class_id, conf, x_center, y_center, width, height = box
+        x1 = int((x_center - width / 2) * image.shape[1])
+        y1 = int((y_center - height / 2) * image.shape[0])
+        x2 = int((x_center + width / 2) * image.shape[1])
+        y2 = int((y_center + height / 2) * image.shape[0])
+        
+        # Рисуем прямоугольник на изображении
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+
+        # Форматируем строку с конфиденсом
+        conf_text = f"Conf: {conf:.2f}"
+        text_x = x1
+        text_y = y1 - 10 if y1 - 10 > 10 else y1 + 10  # Чтобы текст не выходил за пределы изображения
+        cv2.putText(image, conf_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    return image
