@@ -93,42 +93,13 @@ def custom_collate_fn(batch):
         }
     }
 
-# def box_loss_fn(pred_boxes, true_boxes):
-#     # Убедитесь, что pred_boxes имеет размерность [N, 4, H, W]
-#     pred_boxes = pred_boxes.squeeze(-1).squeeze(-1)  # Теперь [N, 4]
-
-#     # Убедитесь, что true_boxes имеет размерность [N, 4]
-#     true_boxes = true_boxes.squeeze(1)  # Удаляем размерность 1, теперь [N, 4]
-
-#     # Приведение типов
-#     pred_boxes = pred_boxes.to(torch.float32)
-#     true_boxes = true_boxes.to(torch.float32)
-
-#     # Потери для координат центра
-#     center_loss = F.mse_loss(pred_boxes[:, 0], true_boxes[:, 0]) + F.mse_loss(pred_boxes[:, 1], true_boxes[:, 1])
-
-#     # Потери для ширины и высоты
-#     size_loss = F.mse_loss(pred_boxes[:, 2], true_boxes[:, 2]) + F.mse_loss(pred_boxes[:, 3], true_boxes[:, 3])
-
-#     # Взвешенная сумма потерь
-#     alpha = 9  # Коэффициент для центров
-#     beta = 1   # Коэффициент для размеров
-#     loss = (alpha * center_loss + beta * size_loss)*100
-
-#     print(f'===boxes=== Predict: {[f"{x:.4f}" for x in pred_boxes[0].tolist()]} '
-#       f'True: {[f"{x:.4f}" for x in true_boxes[0].tolist()]} '
-#       f'Loss: {loss.item():.4f}')
-
-#     visualize_boxes(pred_boxes, true_boxes)
-#     return loss
-
 import torch
 import torch.nn.functional as F
 
 def box_loss_fn(pred_boxes, true_boxes, masks):
     # Отладочные принты для проверки входных данных
     # print("pred_boxes:", pred_boxes.shape)
-    print("true_boxes:", true_boxes.shape)
+    # print("true_boxes:", true_boxes.shape)
     # print("masks:", masks.shape)
 
     num_images = pred_boxes.size(0)  # 5
@@ -232,35 +203,6 @@ def construct_video_transform():
 # def get_number_from_tail(string):
 #     return int(re.findall(pattern="\\d+$", string=string)[0])
 
-# class VideoDataset(data.Dataset):
-#     def __init__(self, dataset_root: str, shape: dict, num_frames: int = 1):
-#         super().__init__()
-#         self.shape = shape
-#         self.num_frames = num_frames
-#         self.stride = num_frames - 1 if num_frames > 1 else 1
-
-#         self.total_data_paths = []
-#         for animal in os.listdir(dataset_root):
-#             animal_path = os.path.join(dataset_root, animal)
-#             if os.path.isdir(animal_path):
-#                 image_paths = sorted(glob.glob(os.path.join(animal_path, "*.jpg")))
-#                 box_paths = sorted(glob.glob(os.path.join(animal_path, "*.txt")))
-
-#                 valid_names = []
-#                 for image_path in image_paths:
-#                     image_name = os.path.basename(image_path).replace('.jpg', '')
-#                     corresponding_box_path = os.path.join(animal_path, f"{image_name}.txt")
-#                     if corresponding_box_path in box_paths:
-#                         valid_names.append((image_path, corresponding_box_path))
-
-#                 for clip_idx in range(0, len(valid_names), self.stride):
-#                     clip_info = []
-#                     for i in range(self.num_frames):
-#                         if clip_idx + i < len(valid_names):
-#                             image_path, box_path = valid_names[clip_idx + i]
-#                             clip_info.append((image_path, box_path, animal, i, clip_idx))
-#                     if clip_info:
-#                         self.total_data_paths.append(clip_info)
 class VideoDataset(data.Dataset):
     def __init__(self, dataset_root: str, shape: dict, num_frames: int = 5):
         super().__init__()
@@ -281,11 +223,15 @@ class VideoDataset(data.Dataset):
                     corresponding_box_path = os.path.join(animal_path, f"{image_name}.txt")
                     if corresponding_box_path in box_paths:
                         valid_names.append((image_path, corresponding_box_path))
-
+                # print('===valid_names===', valid_names)
                 for clip_idx in range(0, len(valid_names), self.stride):
                     clip_info = []
                     current_index = 0  # Начинаем с 0 для индекса
 
+                    if clip_idx + self.stride > len(valid_names):
+                        clip_idx = len(valid_names) - self.stride
+
+                    # print('===clip_idx===', clip_idx, list(range(0, len(valid_names), self.stride)), len(valid_names), self.stride)
                     # Добавляем доступные кадры в clip_info
                     for i in range(self.num_frames):
                         if clip_idx + i < len(valid_names):
@@ -299,7 +245,7 @@ class VideoDataset(data.Dataset):
                         clip_info.sort(key=lambda x: int(os.path.basename(x[0]).replace('.jpg', '')))
                         clip_info = [(clip_info[index][0], clip_info[index][1], clip_info[index][2], index, clip_idx) for index in range(len(clip_info))]
                         self.total_data_paths.append(clip_info)
-
+                    # print('===self.total_data_paths===', self.total_data_paths)
         self.frame_specific_transformation = construct_frame_transform()
         self.frame_share_transformation = construct_video_transform()
 
@@ -363,6 +309,9 @@ class VideoDataset(data.Dataset):
 
     def __len__(self):
         return len(self.total_data_paths)
+
+
+
     
 def parse_cfg():
     parser = argparse.ArgumentParser("Training and evaluation script")
@@ -489,8 +438,11 @@ def draw_bounding_boxes(image, boxes, color=(0,0,255)):
     :return: Изображение с отрисованными bounding boxes.
     """
     for box in boxes:
-        # if np.all(box == 0):
-        #     continue
+        # Проверяем, является ли box равным [0. 0. 0. 0. 0. 0.]
+        if isinstance(box, np.ndarray) and np.all(box == 0):
+            continue  # Пропускаем этот бокс
+
+        # print('===box===', type(box), box)
         class_id, conf, x_center, y_center, width, height = box
         x1 = int((x_center - width / 2) * image.shape[1])
         y1 = int((y_center - height / 2) * image.shape[0])

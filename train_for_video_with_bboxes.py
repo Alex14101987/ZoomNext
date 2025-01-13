@@ -7,12 +7,12 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 def train(model, cfg):
     # Инициализация датасета и загрузчика
-    tr_dataset = VideoDataset(
+    dataset = VideoDataset(
         dataset_root=cfg.train.data.dataset_infos.ZoomNext_dataset.root,
         shape=cfg.train.data.shape,
     )
     loader = data.DataLoader(
-        dataset=tr_dataset,
+        dataset=dataset,
         batch_size=cfg.train.batch_size,
         num_workers=cfg.train.num_workers,
         shuffle=True,
@@ -60,7 +60,7 @@ def train(model, cfg):
         for _, batch in enumerate(loader):
             # Обновление learning rate
             scheduler.step(curr_idx=counter.curr_iter)
-
+            # print(batch['data'].keys())
             # Подготовка данных
             data_to_move = {
                 "image_s": batch['data']["image_s"],

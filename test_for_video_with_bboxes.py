@@ -18,8 +18,9 @@ def test(model, cfg, loader):
     # Получение путей к изображениям
     image_folder = os.path.join("ZoomNext_dataset_xywh/Train", "arctic_fox")
     image_paths = [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.endswith('.jpg')]
-    
+    # print('===loader===', loader.dataset.total_data_paths)
     for batch_idx, batch in enumerate(loader):
+        # print('===batches===', batch_idx, batch['data']['image_s'].shape, batch['data']['image_m'].shape, batch['data']['image_l'].shape, batch['data']['boxes'].shape)
         paths = batch["data"].pop("paths", None)
         data_batch = pt_utils.to_device(data=batch["data"], device=cfg.device)
                 
@@ -41,16 +42,14 @@ def test(model, cfg, loader):
 
         # Обработка кадров с перекрытием
         for frame_idx in range(pred_boxes.shape[0]):
-            # Используем current_image_index для индексации изображений
-            image_index = [i for i in range(batch_idx*4,batch_idx*4+5)][frame_idx]
-            
-            if image_index >= len(image_paths):
-                break  # Если индекс выходит за пределы, выходим из цикла
+            # loader.dataset.total_data_paths
+            image_index = sum(loader.dataset.total_data_paths[batch_idx][frame_idx][-2:])
+            # print('===image_index===', batch_idx, frame_idx, image_index)
 
             image_path = image_paths[image_index]  # Получаем путь к изображению
             image = cv2.imread(image_path)  # Читаем изображение
             current_pred_box = pred_boxes[frame_idx]
-            # print('===image_path===', image_path)
+            print('===image_path===', image_path)
             # print(f"Batch {batch_idx}: Pred Box: {current_pred_box}, True Box: {true_boxes[frame_idx].tolist()}, Path: {image_path}")
             # print(f"Batch {batch_idx}, Frame {frame_idx}: Pred Box: {current_pred_box}, True Box: {true_boxes[frame_idx].tolist()}")
 
@@ -60,9 +59,10 @@ def test(model, cfg, loader):
             for pred_box in current_pred_box:
                 image = draw_bounding_boxes(image, [pred_box], color=(255, 0, 0))
             # image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][0]])
-            # print('============', true_boxes.shape, true_boxes)
+            
             for i in range(true_boxes.shape[1]):
                 image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][i]])
+                print('======true_boxes[frame_idx][i]======', [true_boxes[frame_idx][i]])
 
             # Записываем обработанное изображение в видео
             out.write(image_with_boxes)
