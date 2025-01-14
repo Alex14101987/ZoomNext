@@ -33,7 +33,7 @@ def test(model, cfg, loader):
             outputs = model(data=data_batch)
         pred_boxes, masks = postprocess(outputs)
         true_boxes = data_batch['boxes']
-        print('===test_shapes===', pred_boxes.shape, true_boxes.shape, masks.shape)
+        # print('===test_shapes===', pred_boxes.shape, true_boxes.shape, masks.shape)
         box_loss_fn(pred_boxes, true_boxes, masks)
 
         pred_boxes = pred_boxes.squeeze(-1).squeeze(-1)
@@ -49,7 +49,7 @@ def test(model, cfg, loader):
             image_path = image_paths[image_index]  # Получаем путь к изображению
             image = cv2.imread(image_path)  # Читаем изображение
             current_pred_box = pred_boxes[frame_idx]
-            print('===image_path===', image_path)
+            # print('===image_path===', image_path)
             # print(f"Batch {batch_idx}: Pred Box: {current_pred_box}, True Box: {true_boxes[frame_idx].tolist()}, Path: {image_path}")
             # print(f"Batch {batch_idx}, Frame {frame_idx}: Pred Box: {current_pred_box}, True Box: {true_boxes[frame_idx].tolist()}")
 
@@ -62,7 +62,7 @@ def test(model, cfg, loader):
             
             for i in range(true_boxes.shape[1]):
                 image_with_boxes = draw_bounding_boxes(image, [true_boxes[frame_idx][i]])
-                print('======true_boxes[frame_idx][i]======', [true_boxes[frame_idx][i]])
+                # print('======true_boxes[frame_idx][i]======', [true_boxes[frame_idx][i]])
 
             # Записываем обработанное изображение в видео
             out.write(image_with_boxes)

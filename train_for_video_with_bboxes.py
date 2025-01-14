@@ -15,7 +15,7 @@ def train(model, cfg):
         dataset=dataset,
         batch_size=cfg.train.batch_size,
         num_workers=cfg.train.num_workers,
-        shuffle=True,
+        shuffle=False,
         drop_last=True,
         pin_memory=True,
         collate_fn=custom_collate_fn,
@@ -75,9 +75,10 @@ def train(model, cfg):
 
             with torch.cuda.amp.autocast(enabled=cfg.train.use_amp):
                 outputs = model(data=data_batch, iter_percentage=counter.curr_percent)
+                print('===outputs.shape===', outputs['pred_boxes'].shape)
                 pred_boxes, masks = postprocess(outputs)
                 true_boxes = data_batch["boxes"]
-                print('===train_shapes===', pred_boxes.shape, true_boxes.shape, masks.shape)
+                # print('===train_shapes===', pred_boxes.shape, true_boxes.shape, masks.shape)
                 loss = box_loss_fn(pred_boxes, true_boxes, masks)
 
                 # Проверка на NaN и Inf

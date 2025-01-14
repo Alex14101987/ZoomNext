@@ -106,85 +106,13 @@ class _ZoomNeXt_Base(nn.Module):
     #         return outputs
 
     def forward(self, data, **kwargs):
-        # Получаем логиты от основной модели
-        logits = self.body(data=data)
 
         # Создаем словарь для хранения выходных данных
-        outputs = {}
-
-        if self.training:
-            true_boxes = data["boxes"]  # Получаем истинные координаты ограничивающих прямоугольников
-
-            # Извлекаем boxes, scores и classes из логитов
-            boxes_list = logits  # Теперь logits - это список в формате [class_id, confidence, center_x, center_y, width, height]
-
-            # Проверка размерностей
-            N = len(boxes_list)  # Получаем количество изображений
-            num_boxes = [len(boxes) for boxes in boxes_list]  # Получаем количество предсказанных боксов для каждого изображения
-
-            # Создаем пустой тензор для предсказанных боксов
-            max_boxes = max(num_boxes)  # Максимальное количество боксов в батче
-            boxes_tensor = torch.zeros((N, max_boxes, 6), dtype=torch.float32)  # [N, max_boxes, 6]
-
-            # Заполняем тензор предсказанными боксами
-            for i, boxes in enumerate(boxes_list):
-                for j, box in enumerate(boxes):
-                    # Проверяем, является ли box тензором
-                    if isinstance(box, torch.Tensor):
-                        boxes_tensor[i, j, :] = box.clone().detach()
-                    else:
-                        boxes_tensor[i, j, :] = torch.tensor(box, dtype=torch.float32)
-
-            # Проверка размерностей
-            # print('===outputs.shapes===', boxes_tensor.shape)
-
-            # Проверка размерности true_boxes
-            if true_boxes.dim() == 3:  # [N, num_boxes, 6]
-                true_num_boxes = true_boxes.size(1)
-
-                # Проверка на наличие истинных боксов
-                if true_num_boxes == 0:
-                    # Если нет ни одного bounding box, создаем пустой тензор
-                    true_boxes = torch.empty((N, max_boxes, 6), dtype=torch.float32)  # Пустой тензор [N, max_boxes, 6]
-                else:
-                    # Здесь предполагается, что true_boxes уже имеет нужную размерность
-                    true_boxes = true_boxes  # Оставляем как есть
-
-                # Проверка размерностей
-                assert boxes_tensor.shape[0] == true_boxes.shape[0], f"Shape mismatch: boxes_tensor {boxes_tensor.shape}, true_boxes {true_boxes.shape}"
-
-                # # Вычисляем потери для всех боксов
-                # box_loss = self.compute_loss(boxes_tensor, true_boxes)
-
-                # outputs["loss"] = box_loss
-                outputs["pred_boxes"] = boxes_tensor  # Добавляем предсказанные bounding boxes в выходные данные
-                return outputs  # Возвращаем выходные данные
-        else:
-            # Для режима инференса, извлекаем предсказанные боксы и уверенности
-            boxes_tensor = logits  # Теперь logits - это список в формате [class_id, confidence, center_x, center_y, width, height]
-
-            # Применяем NMS (Non-Maximum Suppression), если необходимо
-            filtered_boxes_list = []
-            for boxes in boxes_tensor:
-                if len(boxes) > 0:
-                    # Применяем NMS для каждого кадра
-                    indices = self.nms(torch.tensor([box[2:4] for box in boxes]), torch.tensor([box[1] for box in boxes]), threshold=0.5)
-                    filtered_boxes = [boxes[i] for i in indices]
-                    filtered_boxes_list.append(filtered_boxes)
-                else:
-                    filtered_boxes_list.append([])
-
-            # Создаем тензор для предсказанных боксов
-            max_boxes = max(len(boxes) for boxes in filtered_boxes_list)
-            boxes_tensor = torch.zeros((len(filtered_boxes_list), max_boxes, 6), dtype=torch.float32)
-
-            for i, boxes in enumerate(filtered_boxes_list):
-                for j, box in enumerate(boxes):
-                    boxes_tensor[i, j, :] = torch.tensor(box, dtype=torch.float32)
-
-            outputs["pred_boxes"] = boxes_tensor  # Сохраняем результаты в выходной словарь
-
-            return outputs
+        outputs = {
+            "pred_boxes": self.body(data=data)
+        }
+        # print('===outputs.shape===', outputs['pred_boxes'].shape)
+        return outputs
 
 
     def get_grouped_params(self):
@@ -219,7 +147,8 @@ class PvtV2B2_ZoomNeXt(_ZoomNeXt_Base):
         siu_groups=4,
         hmu_groups=6,
         num_classes=1,  # Количество классов
-        max_boxes=1000,   # Максимальное количество боксов для предсказания
+        # num_anchors=9
+        # max_boxes=1000,   # Максимальное количество боксов для предсказания
     ):
         super().__init__()
         self.set_backbone(pretrained=pretrained, use_checkpoint=False)
@@ -249,10 +178,7 @@ class PvtV2B2_ZoomNeXt(_ZoomNeXt_Base):
         self.normalizer = PixelNormalizer() if input_norm else nn.Identity()
 
         self.predictor = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
-            ConvBNReLU(64, 32, 3, 1, 1),
-            nn.AdaptiveAvgPool2d(1),  # Уменьшаем размерность до [N, 32, 1, 1]
-            nn.Conv2d(32, max_boxes * (num_classes + 1 + 4), 1),  # добавили 4 для bbox
+            nn.Conv2d(64, num_classes + 5, kernel_size=1)  # 9 анкерных боксов, 80 классов и 5 для bbox
         )
 
         self.num_classes = num_classes  # Инициализируем num_classes для дальнейшего использования
@@ -268,18 +194,6 @@ class PvtV2B2_ZoomNeXt(_ZoomNeXt_Base):
         c4 = features["reduction_4"]
         c5 = features["reduction_5"]
         return c2, c3, c4, c5
-
-    def nms(self, boxes, scores, threshold):
-        # Перемещение тензоров на GPU, если доступно
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        boxes = boxes.to(device)
-        scores = scores.to(device)
-
-        # Теперь вызываем torchvision.ops.nms
-        indices = torchvision.ops.nms(boxes, scores, threshold)
-        
-        return indices
 
     def body(self, data):
         # print('===========data["image_m"].shape=============', data["image_m"].shape)
@@ -313,13 +227,13 @@ class PvtV2B2_ZoomNeXt(_ZoomNeXt_Base):
         # print('===last_x.shape===', x.shape)
         output = self.predictor(x)
 
-        # Debugging: Check for NaN or Inf in model output
+        # # Debugging: Check for NaN or Inf in model output
         # if torch.isnan(output).any() or torch.isinf(output).any():
         #     print("Debug: Found NaN or Inf in predictor output")
-        #     print('===predictor_outpets.shape===', output.shape)
+        #     print('===predictor_outputs.shape===', output.shape)
         # else:
         #     print('===Not found Nan or Inf in predictor output===')
-        #     print('===predictor_outpets.shape===', output.shape)
+        #     print('===predictor_outputs.shape===', output.shape)
         return output
 
 
