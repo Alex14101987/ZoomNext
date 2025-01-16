@@ -32,26 +32,56 @@ LOGGER.addHandler(stream_handler)
 
 
 def construct_frame_transform():
+
+    # # аугментация включена
+    # limit=90
+    # p=0.5
+    # brightness_limit=0.02
+    # contrast_limit=0.02
+
+    # аугментация выключена
+    limit=0
+    p=0.0
+    brightness_limit=0
+    contrast_limit=0
+
     return A.Compose(
         [
-            A.Rotate(limit=90, p=0.5, interpolation=cv2.INTER_LINEAR, border_mode=cv2.BORDER_REFLECT101),
-            A.RandomBrightnessContrast(brightness_limit=0.02, contrast_limit=0.02, p=0.5),
+            A.Rotate(limit=limit, p=p, interpolation=cv2.INTER_LINEAR, border_mode=cv2.BORDER_REFLECT101),
+            A.RandomBrightnessContrast(brightness_limit=brightness_limit, contrast_limit=contrast_limit, p=p),
         ]
     )
 
 
 def construct_video_transform():
+
+   # # аугментация включена
+    # p=0.5
+    # brightness_limit=0.1
+    # contrast_limit=0.1
+    # hue_shift_limit=5
+    # sat_shift_limit=10
+    # val_shift_limit=10
+
+    # аугментация выключена
+    p=0.0
+    brightness_limit=0
+    contrast_limit=0
+    hue_shift_limit=0
+    sat_shift_limit=0
+    val_shift_limit=0 
+
     return A.ReplayCompose(
         [
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=0.5),
-            A.HueSaturationValue(hue_shift_limit=5, sat_shift_limit=10, val_shift_limit=10, p=0.5),
+            A.HorizontalFlip(p=p),
+            A.RandomBrightnessContrast(brightness_limit=brightness_limit, contrast_limit=contrast_limit, p=p),
+            A.HueSaturationValue(hue_shift_limit=hue_shift_limit, sat_shift_limit=sat_shift_limit, val_shift_limit=val_shift_limit, p=p),
         ]
     )
 
 
 def get_number_from_tail(string):
-    return int(re.findall(pattern="\d+$", string=string)[0])
+    return int(re.findall(pattern="\\d+$", string=string)[0])
 
 
 class VideoTestDataset(data.Dataset):
@@ -303,11 +333,14 @@ def test(model, cfg):
         )
         LOGGER.info(f"Testing with testset: {te_name}: {len(te_dataset)}")
 
+        cfg.save_results = True
+        print('===========================================', cfg.save_results)
+
         if cfg.save_results:
             save_path = os.path.join(cfg.path.save, te_name)
             LOGGER.info(f"Results will be saved into {save_path}")
         else:
-            save_path = ""
+            save_path = "outputs"
 
         seg_results, group_seg_results = test_wrapper.eval(model=model, data_loader=te_loader, save_path=save_path)
         seg_results_str = ", ".join([f"{k}: {v:.03f}" for k, v in seg_results.items()])
@@ -527,3 +560,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+# python main_for_video.py --config configs/vcod_finetune.py --model-name PvtV2B5_ZoomNeXt --evaluate --load-from pvtv2-b5-5frame-zoomnext.pth
+# python main_for_video.py --config configs/vcod_finetune.py --info finetune --model-name videoPvtV2B5_ZoomNeXt --load-from pvtv2-b5-5frame-zoomnext.pth
+
+# snow_leopard_10\Imgs: |sm 0.481 |wfm 0.002 |mae 0.011 |avgem 0.322 |adpem 0.292 |maxem 0.534 |avgfmeasure 0.002 |adpfmeasure 0.003 |maxfmeasure 0.003 |avgiou 0.001 |adpiou 0.002 |maxiou 0.002 |avgdice 0.003 |maxdice 0.004
+# snow_leopard_10\Imgs: |sm 0.607 |wfm 0.181 |mae 0.001 |avgem 0.575 |adpem 0.368 |maxem 0.783 |avgfmeasure 0.213 |adpfmeasure 0.107 |maxfmeasure 0.286 |avgiou 0.126 |adpiou 0.085 |maxiou 0.2   |avgdice 0.187 |maxdice 0.291
+
+# sm: 0.733, wfm: 0.482, mae: 0.008, avgem: 0.738, adpem: 0.708, maxem: 0.803, avgfmeasure: 0.500, adpfmeasure: 0.441, maxfmeasure: 0.514, avgiou: 0.426, adpiou: 0.397, maxiou: 0.443, avgdice: 0.499, maxdice: 0.521
+# sm: 0.581, wfm: 0.237, mae: 0.023, avgem: 0.525, adpem: 0.618, maxem: 0.727, avgfmeasure: 0.300, adpfmeasure: 0.325, maxfmeasure: 0.387, avgiou: 0.156, adpiou: 0.254, maxiou: 0.275, avgdice: 0.233, maxdice: 0.370

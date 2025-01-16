@@ -39,6 +39,6 @@ test = dict(
     batch_size=__BATCHSIZE,
     data=dict(
         shape=dict(h=384, w=384),
-        names=["cad", "moca_mask_te"],
+        names=["moca_mask_te"],
     ),
 )
