@@ -188,3 +188,4 @@ test1/
 CAMO/
 eff-b1-4frame-zoomnext.pth
 resnet50-timm.pth
+eff-b0-4frame-zoomnext.pth

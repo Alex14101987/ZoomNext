@@ -408,3 +408,109 @@ class videoEffB1_ZoomNeXt(EffB1_ZoomNeXt):
             f"ReTrained: {len(param_groups['retrained'])}}}"
         )
         return param_groups
+
+class EffB0_ZoomNeXt(_ZoomNeXt_Base):
+    def __init__(
+            self,
+            pretrained,
+            num_frames=1,
+            input_norm=True,
+            mid_dim=64,
+            siu_groups=4,
+            hmu_groups=6,
+            **kwargs
+            ):
+        super().__init__()
+        self.set_backbone(pretrained)
+
+        self.tra_5 = SimpleASPP(self.embed_dims[4], out_dim=mid_dim)
+        self.siu_5 = MHSIU(mid_dim, siu_groups)
+        self.hmu_5 = RGPU(mid_dim, hmu_groups, num_frames=num_frames)
+
+        self.tra_4 = ConvBNReLU(self.embed_dims[3], mid_dim, 3, 1, 1)
+        self.siu_4 = MHSIU(mid_dim, siu_groups)
+        self.hmu_4 = RGPU(mid_dim, hmu_groups, num_frames=num_frames)
+
+        self.tra_3 = ConvBNReLU(self.embed_dims[2], mid_dim, 3, 1, 1)
+        self.siu_3 = MHSIU(mid_dim, siu_groups)
+        self.hmu_3 = RGPU(mid_dim, hmu_groups, num_frames=num_frames)
+
+        self.tra_2 = ConvBNReLU(self.embed_dims[1], mid_dim, 3, 1, 1)
+        self.siu_2 = MHSIU(mid_dim, siu_groups)
+        self.hmu_2 = RGPU(mid_dim, hmu_groups, num_frames=num_frames)
+
+        self.tra_1 = ConvBNReLU(self.embed_dims[0], mid_dim, 3, 1, 1)
+        self.siu_1 = MHSIU(mid_dim, siu_groups)
+        self.hmu_1 = RGPU(mid_dim, hmu_groups, num_frames=num_frames)
+
+        self.normalizer = PixelNormalizer() if input_norm else nn.Identity()
+        self.predictor = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
+            ConvBNReLU(64, 32, 3, 1, 1),
+            nn.Conv2d(32, 1, 1),
+        )
+
+    def set_backbone(self, pretrained):
+        self.encoder = EfficientNet.from_pretrained("efficientnet-b0", pretrained=pretrained)
+        self.embed_dims = [16, 24, 40, 112, 320]
+
+    def normalize_encoder(self, x):
+        x = self.normalizer(x)
+        features = self.encoder.extract_endpoints(x)
+        c1 = features["reduction_1"]
+        c2 = features["reduction_2"]
+        c3 = features["reduction_3"]
+        c4 = features["reduction_4"]
+        c5 = features["reduction_5"]
+        return c1, c2, c3, c4, c5
+
+    def body(self, data):
+        l_trans_feats = self.normalize_encoder(data["image_l"])
+        m_trans_feats = self.normalize_encoder(data["image_m"])
+        s_trans_feats = self.normalize_encoder(data["image_s"])
+
+        l, m, s = self.tra_5(l_trans_feats[4]), self.tra_5(m_trans_feats[4]), self.tra_5(s_trans_feats[4])
+        lms = self.siu_5(l=l, m=m, s=s)
+        x = self.hmu_5(lms)
+
+        # l, m, s = self.tra_4(l_trans_feats[3]), self.tra_4(m_trans_feats[3]), self.tra_4(s_trans_feats[3])
+        # lms = self.siu_4(l=l, m=m, s=s)
+        # x = self.hmu_4(lms + resize_to(x, tgt_hw=lms.shape[-2:]))
+
+        # l, m, s = self.tra_3(l_trans_feats[2]), self.tra_3(m_trans_feats[2]), self.tra_3(s_trans_feats[2])
+        # lms = self.siu_3(l=l, m=m, s=s)
+        # x = self.hmu_3(lms + resize_to(x, tgt_hw=lms.shape[-2:]))
+
+        # l, m, s = self.tra_2(l_trans_feats[1]), self.tra_2(m_trans_feats[1]), self.tra_2(s_trans_feats[1])
+        # lms = self.siu_2(l=l, m=m, s=s)
+        # x = self.hmu_2(lms + resize_to(x, tgt_hw=lms.shape[-2:]))
+
+        # l, m, s = self.tra_1(l_trans_feats[0]), self.tra_1(m_trans_feats[0]), self.tra_1(s_trans_feats[0])
+        # lms = self.siu_1(l=l, m=m, s=s)
+        # x = self.hmu_1(lms + resize_to(x, tgt_hw=lms.shape[-2:]))
+        x = F.interpolate(x, size=(192, 192), mode='bilinear', align_corners=False)
+        return self.predictor(x)
+
+
+class videoEffB0_ZoomNeXt(EffB0_ZoomNeXt):
+    def get_grouped_params(self):
+        param_groups = {"pretrained": [], "fixed": [], "retrained": []}
+        for name, param in self.named_parameters():
+            if name.startswith("encoder.patch_embed1."):
+                param.requires_grad = False
+                param_groups["fixed"].append(param)
+            elif name.startswith("encoder."):
+                param_groups["pretrained"].append(param)
+            else:
+                if "temperal_proj" in name:
+                    param_groups["retrained"].append(param)
+                else:
+                    param_groups["pretrained"].append(param)
+
+        LOGGER.info(
+            f"Parameter Groups:{{"
+            f"Pretrained: {len(param_groups['pretrained'])}, "
+            f"Fixed: {len(param_groups['fixed'])}, "
+            f"ReTrained: {len(param_groups['retrained'])}}}"
+        )
+        return param_groups

@@ -576,6 +576,10 @@ if __name__ == "__main__":
 # python main_for_video.py --config configs/vcod_finetune.py --info finetune --model-name videoEffB1_ZoomNeXt --load-from outputs\EffB1_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP_INFOpretrain\exp_0\pth\state_final.pth
 # python main_for_video.py --config configs/vcod_finetune.py --model-name videoEffB1_ZoomNeXt --evaluate --load-from eff-b1-4frame-zoomnext.pth
 
+# python main_for_image.py --config configs/icod_pretrain.py --info pretrain --model-name EffB0_ZoomNeXt --pretrained
+# python main_for_video.py --config configs/vcod_finetune.py --info finetune --model-name videoEffB0_ZoomNeXt --load-from outputs\EffB0_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP_INFOpretrain\exp_1\pth\state_final.pth
+# python main_for_video.py --config configs/vcod_finetune.py --model-name videoEffB0_ZoomNeXt --evaluate --load-from eff-b0-4frame-zoomnext.pth
+
 # snow_leopard_10\Imgs: |sm 0.481 |wfm 0.002 |mae 0.011 |avgem 0.322 |adpem 0.292 |maxem 0.534 |avgfmeasure 0.002 |adpfmeasure 0.003 |maxfmeasure 0.003 |avgiou 0.001 |adpiou 0.002 |maxiou 0.002 |avgdice 0.003 |maxdice 0.004
 # snow_leopard_10\Imgs: |sm 0.607 |wfm 0.181 |mae 0.001 |avgem 0.575 |adpem 0.368 |maxem 0.783 |avgfmeasure 0.213 |adpfmeasure 0.107 |maxfmeasure 0.286 |avgiou 0.126 |adpiou 0.085 |maxiou 0.2   |avgdice 0.187 |maxdice 0.291
 

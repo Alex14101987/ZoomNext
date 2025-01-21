@@ -3,7 +3,7 @@ _base_ = ["icod_train.py"]
 has_test = False
 
 __BATCHSIZE = 4
-__NUM_EPOCHS = 150
+__NUM_EPOCHS = 10
 __NUM_TR_SAMPLES = 3040
 __ITER_PER_EPOCH = __NUM_TR_SAMPLES // __BATCHSIZE  # drop_last is True
 __NUM_ITERS = __NUM_EPOCHS * __ITER_PER_EPOCH

@@ -22,6 +22,12 @@ result_tests
 --model-name videoEffB1_ZoomNeXt
 737 кадров обработано за 36.32 секунд, ФПС - 20.29
 
+--model-name videoEffB0_ZoomNeXt
+737 кадров обработано за 33.93 секунд, ФПС - 21.72
+
+--model-name videoEffB0_ZoomNeXt убрал 4 из 5 блоков трансформера
+737 кадров обработано за 24.15 секунд, ФПС - 30.52
+
 --model-name RN50_ZoomNeXt 109 МБ
 250 кадров обработано за 38.60 секунд, ФПС - 6.48
 sm: 0.779, wfm: 0.646, mae: 0.089
@@ -49,31 +55,3 @@ sm: 0.856, wfm: 0.783, mae: 0.056
 --model-name PvtV2B5_ZoomNeXt 323 МБ
 250 кадров обработано за 42.51 секунд, ФПС - 5.88 (7.35 если увеличить выборку в 5 раз)
 sm: 0.859, wfm: 0.775, mae: 0.057
-
-
-RuntimeError: Error(s) in loading state_dict for videoPvtV2B5_ZoomNeXt:
-        size mismatch for hmu_5.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
-        size mismatch for hmu_5.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_5.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_4.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
-        size mismatch for hmu_4.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_4.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_3.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
-        size mismatch for hmu_3.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_3.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_2.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
-        size mismatch for hmu_2.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-        size mismatch for hmu_2.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
-
-
-          File "C:\Users\ZabockiyAE\ZoomNeXt\methods\zoomnext\layers.py", line 61, in forward
-    unshifted_x_tmp = rearrange(x, "(b t) c h w -> b c h w t", t=self.num_frames)
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ZabockiyAE\AppData\Roaming\Python\Python312\site-packages\einops\einops.py", line 591, in rearrange
-    return reduce(tensor, pattern, reduction="rearrange", **axes_lengths)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\ZabockiyAE\AppData\Roaming\Python\Python312\site-packages\einops\einops.py", line 533, in reduce
-    raise EinopsError(message + "\n {}".format(e))
-einops.EinopsError:  Error while processing rearrange-reduction pattern "(b t) c h w -> b c h w t".
- Input tensor shape: torch.Size([4, 192, 12, 12]). Additional info: {'t': 5}.
- Shape mismatch, can't divide axis of length 4 in chunks of 5
