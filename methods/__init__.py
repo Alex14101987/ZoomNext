@@ -7,4 +7,5 @@ from .zoomnext.zoomnext import (
     PvtV2B5_ZoomNeXt,
     RN50_ZoomNeXt,
     videoPvtV2B5_ZoomNeXt,
+    videoEffB1_ZoomNeXt,
 )

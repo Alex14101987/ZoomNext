@@ -299,7 +299,16 @@ class videoPvtV2B5_ZoomNeXt(PvtV2B5_ZoomNeXt):
 
 
 class EffB1_ZoomNeXt(_ZoomNeXt_Base):
-    def __init__(self, pretrained, num_frames=1, input_norm=True, mid_dim=64, siu_groups=4, hmu_groups=6, **kwargs):
+    def __init__(
+            self,
+            pretrained,
+            num_frames=1,
+            input_norm=True,
+            mid_dim=64,
+            siu_groups=4,
+            hmu_groups=6,
+            **kwargs
+            ):
         super().__init__()
         self.set_backbone(pretrained)
 
@@ -376,3 +385,26 @@ class EffB4_ZoomNeXt(EffB1_ZoomNeXt):
     def set_backbone(self, pretrained):
         self.encoder = EfficientNet.from_pretrained("efficientnet-b4", pretrained=pretrained)
         self.embed_dims = [24, 32, 56, 160, 448]
+
+class videoEffB1_ZoomNeXt(EffB1_ZoomNeXt):
+    def get_grouped_params(self):
+        param_groups = {"pretrained": [], "fixed": [], "retrained": []}
+        for name, param in self.named_parameters():
+            if name.startswith("encoder.patch_embed1."):
+                param.requires_grad = False
+                param_groups["fixed"].append(param)
+            elif name.startswith("encoder."):
+                param_groups["pretrained"].append(param)
+            else:
+                if "temperal_proj" in name:
+                    param_groups["retrained"].append(param)
+                else:
+                    param_groups["pretrained"].append(param)
+
+        LOGGER.info(
+            f"Parameter Groups:{{"
+            f"Pretrained: {len(param_groups['pretrained'])}, "
+            f"Fixed: {len(param_groups['fixed'])}, "
+            f"ReTrained: {len(param_groups['retrained'])}}}"
+        )
+        return param_groups

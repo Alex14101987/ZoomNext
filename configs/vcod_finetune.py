@@ -1,8 +1,9 @@
 _base_ = ["icod_train.py"]
 
-num_frames = 5
+num_frames = 4
 
-__BATCHSIZE = 2
+# __BATCHSIZE = 2
+__BATCHSIZE = 4
 
 train = dict(
     batch_size=__BATCHSIZE,
@@ -32,6 +33,7 @@ train = dict(
     data=dict(
         shape=dict(h=384, w=384),
         names=["moca_mask_tr"],
+        # names=["camo_tr"],
     ),
 )
 
@@ -40,5 +42,6 @@ test = dict(
     data=dict(
         shape=dict(h=384, w=384),
         names=["moca_mask_te"],
+        # names=["camo_te"],
     ),
 )

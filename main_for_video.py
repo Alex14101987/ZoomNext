@@ -33,17 +33,17 @@ LOGGER.addHandler(stream_handler)
 
 def construct_frame_transform():
 
-    # # аугментация включена
-    # limit=90
-    # p=0.5
-    # brightness_limit=0.02
-    # contrast_limit=0.02
+    # аугментация включена
+    limit=90
+    p=0.5
+    brightness_limit=0.02
+    contrast_limit=0.02
 
-    # аугментация выключена
-    limit=0
-    p=0.0
-    brightness_limit=0
-    contrast_limit=0
+    # # аугментация выключена
+    # limit=0
+    # p=0.0
+    # brightness_limit=0
+    # contrast_limit=0
 
     return A.Compose(
         [
@@ -55,21 +55,21 @@ def construct_frame_transform():
 
 def construct_video_transform():
 
-   # # аугментация включена
-    # p=0.5
-    # brightness_limit=0.1
-    # contrast_limit=0.1
-    # hue_shift_limit=5
-    # sat_shift_limit=10
-    # val_shift_limit=10
+   # аугментация включена
+    p=0.5
+    brightness_limit=0.1
+    contrast_limit=0.1
+    hue_shift_limit=5
+    sat_shift_limit=10
+    val_shift_limit=10
 
     # аугментация выключена
-    p=0.0
-    brightness_limit=0
-    contrast_limit=0
-    hue_shift_limit=0
-    sat_shift_limit=0
-    val_shift_limit=0 
+    # p=0.0
+    # brightness_limit=0
+    # contrast_limit=0
+    # hue_shift_limit=0
+    # sat_shift_limit=0
+    # val_shift_limit=0 
 
     return A.ReplayCompose(
         [
@@ -334,7 +334,6 @@ def test(model, cfg):
         LOGGER.info(f"Testing with testset: {te_name}: {len(te_dataset)}")
 
         cfg.save_results = True
-        print('===========================================', cfg.save_results)
 
         if cfg.save_results:
             save_path = os.path.join(cfg.path.save, te_name)
@@ -559,9 +558,23 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     main()
+    
+    elapsed_time = time.time() - start_time
+    fps = 737 / elapsed_time
+    print(f'737 кадров обработано за {elapsed_time:.2f} секунд, ФПС - {fps:.2f}')
+
 # python main_for_video.py --config configs/vcod_finetune.py --model-name PvtV2B5_ZoomNeXt --evaluate --load-from pvtv2-b5-5frame-zoomnext.pth
+# python main_for_image.py --config configs/icod_pretrain.py --info pretrain --model-name PvtV2B5_ZoomNeXt --pretrained
+# python main_for_video.py --config configs/vcod_finetune.py --info finetune --model-name videoPvtV2B5_ZoomNeXt --load-from outputs\PvtV2B5_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP_INFOpretrain\exp_0\pth\state_final.pth
 # python main_for_video.py --config configs/vcod_finetune.py --info finetune --model-name videoPvtV2B5_ZoomNeXt --load-from pvtv2-b5-5frame-zoomnext.pth
+
+
+# python main_for_image.py --config configs/icod_pretrain.py --info pretrain --model-name EffB1_ZoomNeXt --pretrained
+# python main_for_video.py --config configs/vcod_finetune.py --info finetune --model-name videoEffB1_ZoomNeXt --load-from outputs\EffB1_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP_INFOpretrain\exp_0\pth\state_final.pth
+# python main_for_video.py --config configs/vcod_finetune.py --model-name videoEffB1_ZoomNeXt --evaluate --load-from eff-b1-4frame-zoomnext.pth
 
 # snow_leopard_10\Imgs: |sm 0.481 |wfm 0.002 |mae 0.011 |avgem 0.322 |adpem 0.292 |maxem 0.534 |avgfmeasure 0.002 |adpfmeasure 0.003 |maxfmeasure 0.003 |avgiou 0.001 |adpiou 0.002 |maxiou 0.002 |avgdice 0.003 |maxdice 0.004
 # snow_leopard_10\Imgs: |sm 0.607 |wfm 0.181 |mae 0.001 |avgem 0.575 |adpem 0.368 |maxem 0.783 |avgfmeasure 0.213 |adpfmeasure 0.107 |maxfmeasure 0.286 |avgiou 0.126 |adpiou 0.085 |maxiou 0.2   |avgdice 0.187 |maxdice 0.291

@@ -42,13 +42,15 @@ train = dict(
     ),
     data=dict(
         shape=dict(h=384, w=384),
-        names=["cod10k_tr"],
+        # names=["cod10k_tr"],
+        names=["camo_tr"]
     ),
 )
 
 test = dict(
     data=dict(
         shape=dict(h=384, w=384),
-        names=[],
+        # names=[],
+        names=["camo_te"],
     ),
 )

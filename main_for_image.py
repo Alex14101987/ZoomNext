@@ -188,6 +188,8 @@ def test(model, cfg):
         )
         LOGGER.info(f"Testing with testset: {te_name}: {len(te_dataset)}")
 
+        cfg.save_results = True
+
         if cfg.save_results:
             save_path = os.path.join(cfg.path.save, te_name)
             LOGGER.info(f"Results will be saved into {save_path}")
@@ -383,7 +385,7 @@ def main():
     model_class = model_zoo.__dict__.get(cfg.model_name)
     assert model_class is not None, "Please check your --model-name"
     model_code = inspect.getsource(model_class)
-    model = model_class(num_frames=1, pretrained=cfg.pretrained, use_checkpoint=cfg.use_checkpoint)
+    model = model_class(num_frames=4, pretrained=cfg.pretrained, use_checkpoint=cfg.use_checkpoint)
     LOGGER.info(model_code)
     model.to(cfg.device)
 
@@ -402,4 +404,34 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     main()
+    
+    elapsed_time = time.time() - start_time
+    fps = 250 / elapsed_time
+    print(f'250 кадров обработано за {elapsed_time:.2f} секунд, ФПС - {fps:.2f}')
+
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name RN50_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name RN50_ZoomNeXt --evaluate --load-from outputs\RN50_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name EffB1_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name EffB1_ZoomNeXt --evaluate --load-from outputs\EffB1_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name EffB4_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name EffB4_ZoomNeXt --evaluate --load-from outputs\EffB4_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name PvtV2B2_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name PvtV2B2_ZoomNeXt --evaluate --load-from outputs\PvtV2B2_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name PvtV2B3_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name PvtV2B3_ZoomNeXt --evaluate --load-from outputs\PvtV2B3_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name PvtV2B4_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name PvtV2B4_ZoomNeXt --evaluate --load-from outputs\PvtV2B4_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+# python main_for_image.py --config configs/icod_train.py --pretrained --model-name PvtV2B5_ZoomNeXt
+# python main_for_image.py --config configs/icod_train.py --model-name PvtV2B5_ZoomNeXt --evaluate --load-from outputs\PvtV2B5_ZoomNeXt_BS4_LR0.0001_E10_H384_W384_OPMadam_OPGMfinetune_SCstep_AMP\exp_0\pth\state_final.pth
+
+

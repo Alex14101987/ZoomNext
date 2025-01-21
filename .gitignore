@@ -185,3 +185,6 @@ ZoomNextDataset/
 output_video.avi
 test/
 test1/
+CAMO/
+eff-b1-4frame-zoomnext.pth
+resnet50-timm.pth

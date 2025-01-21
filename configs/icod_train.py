@@ -5,7 +5,7 @@ log_interval = 20
 base_seed = 112358
 
 __BATCHSIZE = 4
-__NUM_EPOCHS = 150
+__NUM_EPOCHS = 10
 __NUM_TR_SAMPLES = 3040 + 1000
 __ITER_PER_EPOCH = __NUM_TR_SAMPLES // __BATCHSIZE  # drop_last is True
 __NUM_ITERS = __NUM_EPOCHS * __ITER_PER_EPOCH
@@ -48,7 +48,7 @@ train = dict(
     ),
     data=dict(
         shape=dict(h=384, w=384),
-        names=["cod10k_tr", "camo_tr"],
+        names=["camo_tr"],
     ),
 )
 
@@ -58,6 +58,6 @@ test = dict(
     clip_range=None,
     data=dict(
         shape=dict(h=384, w=384),
-        names=["chameleon", "camo_te", "cod10k_te", "nc4k"],
+        names=["camo_te"],
     ),
 )

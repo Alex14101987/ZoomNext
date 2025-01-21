@@ -1,11 +1,79 @@
 1
-
+sm: 0.845, wfm: 0.077, mae: 0.009, avgem: 0.853, adpem: 0.770, maxem: 0.887, avgfmeasure: 0.089, adpfmeasure: 0.062, maxfmeasure: 0.097, avgiou: 0.058, adpiou: 0.052, maxiou: 0.071, avgdice: 0.078, maxdice: 0.092
 2
-
+sm: 0.851, wfm: 0.082, mae: 0.009, avgem: 0.865, adpem: 0.768, maxem: 0.905, avgfmeasure: 0.100, adpfmeasure: 0.060, maxfmeasure: 0.106, avgiou: 0.068, adpiou: 0.049, maxiou: 0.074, avgdice: 0.090, maxdice: 0.098
 4
-
+sm: 0.843, wfm: 0.076, mae: 0.005, avgem: 0.847, adpem: 0.820, maxem: 0.880, avgfmeasure: 0.090, adpfmeasure: 0.083, maxfmeasure: 0.111, avgiou: 0.050, adpiou: 0.067, maxiou: 0.081, avgdice: 0.072, maxdice: 0.107
 8
-
+sm: 0.868, wfm: 0.122, mae: 0.003, avgem: 0.891, adpem: 0.846, maxem: 0.918, avgfmeasure: 0.134, adpfmeasure: 0.119, maxfmeasure: 0.144, avgiou: 0.094, adpiou: 0.100, maxiou: 0.113, avgdice: 0.119, maxdice: 0.141
+8 with aug
+sm: 0.883, wfm: 0.145, mae: 0.003, avgem: 0.892, adpem: 0.828, maxem: 0.940, avgfmeasure: 0.160, adpfmeasure: 0.124, maxfmeasure: 0.171, avgiou: 0.116, adpiou: 0.108, maxiou: 0.134, avgdice: 0.146, maxdice: 0.164
 16
+sm: 0.817, wfm: 0.000, mae: 0.002, avgem: 0.724, adpem: 0.091, maxem: 0.727, avgfmeasure: 0.000, adpfmeasure: 0.003, maxfmeasure: 0.003, avgiou: 0.000, adpiou: 0.002, maxiou: 0.002, avgdice: 0.000, maxdice: 0.005
+32
+sm: 0.880, wfm: 0.160, mae: 0.003, avgem: 0.887, adpem: 0.841, maxem: 0.930, avgfmeasure: 0.180, adpfmeasure: 0.182, maxfmeasure: 0.200, avgiou: 0.118, adpiou: 0.146, maxiou: 0.148, avgdice: 0.156, maxdice: 0.191
 
-34
+
+
+result_tests
+--model-name videoPvtV2B5_ZoomNeXt
+737 кадров обработано за 39.99 секунд, ФПС - 18.43
+
+--model-name videoEffB1_ZoomNeXt
+737 кадров обработано за 36.32 секунд, ФПС - 20.29
+
+--model-name RN50_ZoomNeXt 109 МБ
+250 кадров обработано за 38.60 секунд, ФПС - 6.48
+sm: 0.779, wfm: 0.646, mae: 0.089
+
+--model-name EffB1_ZoomNeXt 39,9 МБ
+250 кадров обработано за 38.03 секунд, ФПС - 6.57
+sm: 0.794, wfm: 0.687, mae: 0.081
+
+--model-name EffB4_ZoomNeXt 82,5 МБ
+250 кадров обработано за 39.30 секунд, ФПС - 6.36
+sm: 0.810, wfm: 0.707, mae: 0.074
+
+--model-name PvtV2B2_ZoomNeXt 107 МБ
+250 кадров обработано за 38.30 секунд, ФПС - 6.53
+sm: 0.835, wfm: 0.752, mae: 0.066
+
+--model-name PvtV2B3_ZoomNeXt 183 МБ
+250 кадров обработано за 39.58 секунд, ФПС - 6.32
+sm: 0.855, wfm: 0.770, mae: 0.057
+
+--model-name PvtV2B4_ZoomNeXt 249 МБ
+250 кадров обработано за 41.42 секунд, ФПС - 6.04
+sm: 0.856, wfm: 0.783, mae: 0.056
+
+--model-name PvtV2B5_ZoomNeXt 323 МБ
+250 кадров обработано за 42.51 секунд, ФПС - 5.88 (7.35 если увеличить выборку в 5 раз)
+sm: 0.859, wfm: 0.775, mae: 0.057
+
+
+RuntimeError: Error(s) in loading state_dict for videoPvtV2B5_ZoomNeXt:
+        size mismatch for hmu_5.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
+        size mismatch for hmu_5.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_5.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_4.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
+        size mismatch for hmu_4.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_4.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_3.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
+        size mismatch for hmu_3.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_3.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_2.fuse.0.temperal_proj_kv.weight: copying a param with shape torch.Size([2, 1]) from checkpoint, the shape in current model is torch.Size([10, 5]).
+        size mismatch for hmu_2.fuse.0.temperal_proj.0.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+        size mismatch for hmu_2.fuse.0.temperal_proj.2.weight: copying a param with shape torch.Size([1, 1, 3, 3]) from checkpoint, the shape in current model is torch.Size([5, 5, 3, 3]).
+
+
+          File "C:\Users\ZabockiyAE\ZoomNeXt\methods\zoomnext\layers.py", line 61, in forward
+    unshifted_x_tmp = rearrange(x, "(b t) c h w -> b c h w t", t=self.num_frames)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ZabockiyAE\AppData\Roaming\Python\Python312\site-packages\einops\einops.py", line 591, in rearrange
+    return reduce(tensor, pattern, reduction="rearrange", **axes_lengths)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ZabockiyAE\AppData\Roaming\Python\Python312\site-packages\einops\einops.py", line 533, in reduce
+    raise EinopsError(message + "\n {}".format(e))
+einops.EinopsError:  Error while processing rearrange-reduction pattern "(b t) c h w -> b c h w t".
+ Input tensor shape: torch.Size([4, 192, 12, 12]). Additional info: {'t': 5}.
+ Shape mismatch, can't divide axis of length 4 in chunks of 5
